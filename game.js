@@ -64,26 +64,22 @@ class Actor {
             return false;
         }
 
-        // все скобки можно опустить
-        return (this.left < actor.right)
-            && (this.right > actor.left)
-            && (this.top < actor.bottom)
-            && (this.bottom > actor.top);
+        return this.left < actor.right
+            && this.right > actor.left
+            && this.top < actor.bottom
+            && this.bottom > actor.top;
     }
 
 }
 
 class Level {
     constructor(grid=[], actors=[]) {
-        // здесь можно создать копии массивов,
-        // чтобы объект было сложнее исзменить извне
-        this.grid = grid;
-        this.actors = actors;
+
+        this.grid = grid.slice();
+        this.actors = actors.slice();
+
         this.player = actors.find(value => {
-            // тут нужно искать по типу (свойству type)
-            // но вообще подход хороший,
-            // в реальности так наверное правильнее даже
-            if (value instanceof Player) {
+            if (value.type === 'player') {
                 return value
             }
         });
@@ -94,20 +90,12 @@ class Level {
 
         this.height = grid.length;
 
-        // тут можно записать короче с испльзованием
-        // тренарного оператора сравнения и
-        // сокращённой формы стрелчной функции (без фигурных скобок)
-        this.width = grid.reduce((width, row) => {
-            if (row.length > width) {
-                width = row.length;
-            }
-            return width;
-        }, 0);
+        this.width = grid.reduce((width, row) => row.length > width ? row.length : width, 0);
     }
 
     isFinished() {
-        // скобки можно опустить
-        return (this.status !== null) && (this.finishDelay < 0);
+        return this.status !== null
+            && this.finishDelay < 0;
     }
 
     actorAt(actor) {
@@ -115,23 +103,30 @@ class Level {
     }
 
     obstacleAt(pos, size) {
-        // здесь можно не создавать объект Actor,
-        // он исползьуется только для того,
-        // чтобы сложить координаты с размером
-        const actor = new Actor(pos, size);
-        if (actor.bottom > this.height) {
+
+        let bottom = pos.y + size.y;
+
+        if (bottom > this.height) {
             return 'lava';
         }
-        if ((actor.left < 0) || (actor.right > this.width) || (actor.top < 0)) {
+
+        let top = pos.y;
+        let right = pos.x + size.x;
+        let left = pos.x;
+
+        if ((left < 0) || (right > this.width) || (top < 0)) {
             return 'wall';
         }
-        // округлённые значение лучше сохранить в переменных,
-        // чтобы не округлять на каждой итерации
-        for (let col = Math.floor(actor.top); col < Math.ceil(actor.bottom); col++) {
-            for(let row = Math.floor(actor.left); row < Math.ceil(actor.right); row++) {
+
+        top = Math.floor(top);
+        bottom = Math.ceil(bottom);
+        left = Math.floor(left);
+        right = Math.ceil(right);
+
+        for (let col = top; col < bottom; col++) {
+            for(let row = left; row < right; row++) {
                 const intersection = this.grid[col][row];
-                // !== undefined можно убрать
-                if (intersection !== undefined) {
+                if (intersection) {
                     return intersection;
                 }
             }
@@ -140,13 +135,14 @@ class Level {
 
     removeActor(actor) {
         const i = this.actors.indexOf(actor);
-        // не опускайте фигурные скобки у if
-        if (i >= 0) this.actors.splice(i, 1);
+
+        if (i >= 0) {
+            this.actors.splice(i, 1);
+        }
     }
 
     noMoreActors(type) {
-        // тут лучше использвать метод some (он возвращает true/false)
-        return this.actors.find(value => value.type === type) === undefined;
+        return !this.actors.some(value => value.type === type);
     }
 
     playerTouched(type, actor) {
@@ -161,18 +157,16 @@ class Level {
             this.removeActor(actor);
             if (this.noMoreActors(type)) {
                 this.status = 'won';
-                // лишняя строчка
-                return;
             }
         }
     }
 }
 
 class LevelParser {
-    // можно задать значение по-умолчанию
-    constructor(actorsMap) {
-        // тут можно создать копию объекта
-        this.actorsMap = actorsMap;
+
+    constructor(actorsMap={}) {
+        this.actorsMap =  Object.assign({}, actorsMap);
+
         this.obstacles = {
             'x': 'wall',
             '!': 'lava'
@@ -180,38 +174,30 @@ class LevelParser {
     }
 
     actorFromSymbol(symbol) {
-        // лучше проверять целостность объекта в конструкторе
-        // и не проверять везде actorsMap
-        // вообще тут все проверки и условия лишние :)
-        return this.actorsMap !== undefined && symbol in this.actorsMap ? this.actorsMap[symbol] : undefined;
+        return this.actorsMap[symbol];
     }
 
     obstacleFromSymbol(symbol) {
         return this.obstacles[symbol];
     }
 
-    createGrid(gridStr) {
+    createGrid(gridStr=[]) {
         const grid = [];
-        // вместо for of лучше использвать методы массива или классический for
-        // (for of просто используется реже и поводов исопльзвать его чаще нет)
-        for (const line of gridStr) {
+        gridStr.forEach(line =>
             grid.push(
                 line.split('').map(value => {
                     return this.obstacleFromSymbol(value)
                 })
-            );
-        }
+            )
+        );
         return grid;
     }
 
     createActors(str) {
-        // отличное решение
         return str.reduce((actors, line, col) => {
             actors = line.split('').reduce((memo, symbol, row) => {
                 const ActorRef = this.actorFromSymbol(symbol);
-                // первая половина проверкки лишняя
-                // скобки можно опустить
-                if (ActorRef === undefined || (typeof ActorRef) !== 'function') {
+                if (typeof ActorRef !== 'function') {
                     return memo;
                 }
                 const actor = new ActorRef(new Vector(row, col));
@@ -250,16 +236,13 @@ class Fireball extends Actor {
 
     act(time, level) {
         const pos = this.getNextPosition(time);
-        // я  бы написал тут if (!level.obstacleAt...)
-        // а вообще лучше обратить условие, т.к. встреча препятствия -
-        // это скорее не основное поведение
-        // лучше стараться писать функции так, чтобы в начале
-        // обрабатывались особые случаи, а потом шёл основной код
-        if (level.obstacleAt(pos, this.size) === undefined) {
-            this.pos = pos;
+
+        if (level.obstacleAt(pos, this.size)) {
+            this.handleObstacle();
             return;
         }
-        this.handleObstacle();
+
+        this.pos = pos;
     }
 }
 
@@ -278,28 +261,20 @@ class VerticalFireball extends Fireball {
 class FireRain extends Fireball {
     constructor(pos) {
         super(pos, new Vector(0, 3));
-        // тут можно не создавать новый объект Vector,
-        // а исопльзовать pos
-        this.defaultPos = this.pos.times(1);
+        this.defaultPos = pos;
     }
 
     handleObstacle() {
-        // тут тоже
-        this.pos = this.defaultPos.times(1);
+        this.pos = this.defaultPos;
     }
 }
 
 class Coin extends Actor {
-    // тут можно добавить значение по-умолчанию
-    constructor(pos) {
-        // конструктор Actor принимает 3 параметра
-        super(pos, new Vector(0.6, 0.6));
-        // не мутируйте объекты Vector
-        // это может привести к трудно находимым ошибкам
-        this.pos.x += 0.2;
-        this.pos.y += 0.1;
-        // можно использовать pos
-        this.defaultPos = this.pos.times(1);
+    constructor(pos=new Vector(0,0)) {
+        pos.x += 0.2;
+        pos.y += 0.1;
+        super(pos, new Vector(0.6, 0.6), new Vector(0,0));
+        this.defaultPos = pos;
         this.spring = Math.random() * Math.PI * 2;
     }
 
@@ -334,13 +309,9 @@ class Coin extends Actor {
 }
 
 class Player extends Actor {
-    // тут можно добавить значение по-умолчанию
-    constructor(pos) {
-        // конструктор Actor принимает 3 параметра
-        super(pos, new Vector(0.8, 1.5));
-        // не мутируйте объект
-        this.pos.y -= 0.5;
-
+    constructor(pos=new Vector()) {
+        pos.y -= 0.5;
+        super(pos, new Vector(0.8, 1.5), new Vector(0,0));
     }
 
     get type() {
@@ -348,114 +319,17 @@ class Player extends Actor {
     }
 }
 
-// попробуйте загрузить уровни через loadLevels
-// (исправить их можно будет в файле levels.json)
-const schemas =
-    [
-        [
-            "     v                 ",
-            "                       ",
-            "                       ",
-            "             x         ",
-            "  |         x          ",
-            "  o        x           ",
-            "  xxxx              o  ",
-            "  x               = x  ",
-            "  x          o o    x  ",
-            "  x  @    *  xxxxx  x  ",
-            "  xxxxx             x  ",
-            "      x!!!!!!!!!!!!!x  ",
-            "      xxxxxxxxxxxxxxx  ",
-            "                       "
-        ],
-        [
-            "     v                 ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "  |                    ",
-            "  o                 o  ",
-            "  x               = x  ",
-            "  x          o o    x  ",
-            "  x  @       xxxxx  x  ",
-            "  xxxxx             x  ",
-            "      x!!!!!!!!!!!!!x  ",
-            "      xxxxxxxxxxxxxxx  ",
-            "                       "
-        ],
-        [
-            "        |           |  ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "                       ",
-            "     |                 ",
-            "                       ",
-            "         =      |      ",
-            " @ |  o            o   ",
-            "xxxxxxxxx!!!!!!!xxxxxxx",
-            "                       "
-        ],
-        [
-            "                       ",
-            "                       ",
-            "                       ",
-            "    o                  ",
-            "    x      | x!!x=     ",
-            "         x             ",
-            "                      x",
-            "                       ",
-            "                       ",
-            "                       ",
-            "               xxx     ",
-            "                       ",
-            "                       ",
-            "       xxx  |          ",
-            "                       ",
-            " @                     ",
-            "xxx                    ",
-            "                       "
-        ], [
-            "   v         v",
-            "              ",
-            "         !o!  ",
-            "              ",
-            "              ",
-            "              ",
-            "              ",
-            "         xxx  ",
-            "          o   ",
-            "        =     ",
-            "  @           ",
-            "  xxxx        ",
-            "  |           ",
-            "      xxx    x",
-            "              ",
-            "          !   ",
-            "              ",
-            "              ",
-            " o       x    ",
-            " x      x     ",
-            "       x      ",
-            "      x       ",
-            "   xx         ",
-            "              "
-        ]
-    ];
 const actorDict = {
     '@': Player,
     'v': FireRain,
     '|': VerticalFireball,
     '=': HorizontalFireball,
     'o': Coin
-} // точка с запятой
+};
+
 const parser = new LevelParser(actorDict);
-// переменная leve нигде не используется
-const level = parser.parse(schemas[0]);
-runGame(schemas, parser, DOMDisplay)
-    .then(() => alert('Красавчег, держи приз!'));
+
+loadLevels()
+    .then(levels => runGame(JSON.parse(levels), parser, DOMDisplay)
+        .then(() => alert('Красавчег, держи приз!'))
+    );
