@@ -78,6 +78,9 @@ class Level {
         this.grid = grid.slice();
         this.actors = actors.slice();
 
+        // не совсем правлиьное использование мтеода find
+        // функция обратного вызова должна возвращать true или false
+        // а у вас возвращает объект или undefined
         this.player = actors.find(value => {
             if (value.type === 'player') {
                 return value
@@ -94,6 +97,7 @@ class Level {
     }
 
     isFinished() {
+        // тут в одну строчку можно
         return this.status !== null
             && this.finishDelay < 0;
     }
@@ -104,6 +108,7 @@ class Level {
 
     obstacleAt(pos, size) {
 
+        // лучше сразу окрыглённые значения исопльзовать и const
         let bottom = pos.y + size.y;
 
         if (bottom > this.height) {
@@ -114,6 +119,7 @@ class Level {
         let right = pos.x + size.x;
         let left = pos.x;
 
+        // скобки можно убрать
         if ((left < 0) || (right > this.width) || (top < 0)) {
             return 'wall';
         }
@@ -182,6 +188,7 @@ class LevelParser {
     }
 
     createGrid(gridStr=[]) {
+        // тут можно упростить код, если использовать map 2 раза
         const grid = [];
         gridStr.forEach(line =>
             grid.push(
@@ -225,6 +232,7 @@ class Fireball extends Actor {
     }
 
     getNextPosition(time=1) {
+        // лучше писать в одну строчку такие вещи
         return this.pos.plus(
             this.speed.times(time)
         );
@@ -235,6 +243,7 @@ class Fireball extends Actor {
     }
 
     act(time, level) {
+        // я бы эту переменную назвал nextPos, чтобы нельзя было запутаться
         const pos = this.getNextPosition(time);
 
         if (level.obstacleAt(pos, this.size)) {
@@ -271,6 +280,8 @@ class FireRain extends Fireball {
 
 class Coin extends Actor {
     constructor(pos=new Vector(0,0)) {
+        // не мутируйте объекты Vector,
+        // это может привести к трудно находимым ошибкам
         pos.x += 0.2;
         pos.y += 0.1;
         super(pos, new Vector(0.6, 0.6), new Vector(0,0));
@@ -309,7 +320,15 @@ class Coin extends Actor {
 }
 
 class Player extends Actor {
+    // не опускайте арументы конструктора Vector,
+    // если их кто-нибудь поменяет, то всё сломается
     constructor(pos=new Vector()) {
+        // не мутируйте объекты.
+        // Вот пример:
+        // const pos = new Vector(0, 0);
+        // const player1 = new Player(pos); // создали игрока в 0, 0
+        // const player2 = new Player(pos); // хотим создать второго в 0, 0
+        //                                  // но уже равно -0.5, 0
         pos.y -= 0.5;
         super(pos, new Vector(0.8, 1.5), new Vector(0,0));
     }
