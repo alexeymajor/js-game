@@ -78,12 +78,7 @@ class Level {
         this.grid = grid.slice();
         this.actors = actors.slice();
 
-        // не совсем правлиьное использование мтеода find
-        // функция обратного вызова должна возвращать true или false
-        // а у вас возвращает объект или undefined
-        this.player = actors.find(value => {
-            return value.type === 'player'
-        });
+        this.player = actors.find(actor => actor.type === 'player');
 
         this.status = null;
 
@@ -95,7 +90,6 @@ class Level {
     }
 
     isFinished() {
-        // тут в одну строчку можно
         return this.status !== null && this.finishDelay < 0;
     }
 
@@ -105,19 +99,15 @@ class Level {
 
     obstacleAt(pos, size) {
 
-        // лучше сразу окрыглённые значения исопльзовать и const
         const bottom = Math.ceil(pos.y + size.y);
+        const top = Math.floor(pos.y);
+        const left =  Math.floor(pos.x);
+        const right = Math.ceil(pos.x + size.x);
 
         if (bottom > this.height) {
             return 'lava';
         }
 
-        const top = Math.floor(pos.y);
-        const left =  Math.floor(pos.x);
-
-        const right = Math.ceil(pos.x + size.x);
-
-        // скобки можно убрать
         if (left < 0 || right > this.width || top < 0) {
             return 'wall';
         }
@@ -164,7 +154,7 @@ class Level {
 class LevelParser {
 
     constructor(actorsMap={}) {
-        this.actorsMap =  Object.assign({}, actorsMap);
+        this.actorsMap = Object.assign({}, actorsMap);
 
         this.obstacles = {
             'x': 'wall',
@@ -181,12 +171,11 @@ class LevelParser {
     }
 
     createGrid(gridStr=[]) {
-        // тут можно упростить код, если использовать map 2 раза
-        return gridStr.map(line => {
-            return line.split('').map(value => {
-                return this.obstacleFromSymbol(value)
-            })
-        });
+        return gridStr.map(
+            line => line.split('').map(
+                symbol => this.obstacleFromSymbol(symbol)
+            )
+        );
 
     }
 
@@ -222,7 +211,6 @@ class Fireball extends Actor {
     }
 
     getNextPosition(time=1) {
-        // лучше писать в одну строчку такие вещи
         return this.pos.plus( this.speed.times(time) );
     }
 
@@ -231,7 +219,6 @@ class Fireball extends Actor {
     }
 
     act(time, level) {
-        // я бы эту переменную назвал nextPos, чтобы нельзя было запутаться
         const nextPos = this.getNextPosition(time);
 
         if (level.obstacleAt(nextPos, this.size)) {
@@ -268,8 +255,6 @@ class FireRain extends Fireball {
 
 class Coin extends Actor {
     constructor(pos=new Vector(0,0)) {
-        // не мутируйте объекты Vector,
-        // это может привести к трудно находимым ошибкам
         const coinPos = pos.plus(new Vector(0.2, 0.1));
         const coinSize = new Vector(0.6, 0.6);
 
@@ -309,15 +294,7 @@ class Coin extends Actor {
 }
 
 class Player extends Actor {
-    // не опускайте арументы конструктора Vector,
-    // если их кто-нибудь поменяет, то всё сломается
     constructor(pos=new Vector(0,0)) {
-        // не мутируйте объекты.
-        // Вот пример:
-        // const pos = new Vector(0, 0);
-        // const player1 = new Player(pos); // создали игрока в 0, 0
-        // const player2 = new Player(pos); // хотим создать второго в 0, 0
-        //                                  // но уже равно -0.5, 0
         const startPos = pos.plus(new Vector(0, -0.5));
         const playerSize = new Vector(0.8, 1.5);
 
