@@ -82,9 +82,7 @@ class Level {
         // функция обратного вызова должна возвращать true или false
         // а у вас возвращает объект или undefined
         this.player = actors.find(value => {
-            if (value.type === 'player') {
-                return value
-            }
+            return value.type === 'player'
         });
 
         this.status = null;
@@ -98,8 +96,7 @@ class Level {
 
     isFinished() {
         // тут в одну строчку можно
-        return this.status !== null
-            && this.finishDelay < 0;
+        return this.status !== null && this.finishDelay < 0;
     }
 
     actorAt(actor) {
@@ -109,25 +106,21 @@ class Level {
     obstacleAt(pos, size) {
 
         // лучше сразу окрыглённые значения исопльзовать и const
-        let bottom = pos.y + size.y;
+        const bottom = Math.ceil(pos.y + size.y);
 
         if (bottom > this.height) {
             return 'lava';
         }
 
-        let top = pos.y;
-        let right = pos.x + size.x;
-        let left = pos.x;
+        const top = Math.floor(pos.y);
+        const left =  Math.floor(pos.x);
+
+        const right = Math.ceil(pos.x + size.x);
 
         // скобки можно убрать
-        if ((left < 0) || (right > this.width) || (top < 0)) {
+        if (left < 0 || right > this.width || top < 0) {
             return 'wall';
         }
-
-        top = Math.floor(top);
-        bottom = Math.ceil(bottom);
-        left = Math.floor(left);
-        right = Math.ceil(right);
 
         for (let col = top; col < bottom; col++) {
             for(let row = left; row < right; row++) {
@@ -189,15 +182,12 @@ class LevelParser {
 
     createGrid(gridStr=[]) {
         // тут можно упростить код, если использовать map 2 раза
-        const grid = [];
-        gridStr.forEach(line =>
-            grid.push(
-                line.split('').map(value => {
-                    return this.obstacleFromSymbol(value)
-                })
-            )
-        );
-        return grid;
+        return gridStr.map(line => {
+            return line.split('').map(value => {
+                return this.obstacleFromSymbol(value)
+            })
+        });
+
     }
 
     createActors(str) {
@@ -233,9 +223,7 @@ class Fireball extends Actor {
 
     getNextPosition(time=1) {
         // лучше писать в одну строчку такие вещи
-        return this.pos.plus(
-            this.speed.times(time)
-        );
+        return this.pos.plus( this.speed.times(time) );
     }
 
     handleObstacle() {
@@ -244,14 +232,14 @@ class Fireball extends Actor {
 
     act(time, level) {
         // я бы эту переменную назвал nextPos, чтобы нельзя было запутаться
-        const pos = this.getNextPosition(time);
+        const nextPos = this.getNextPosition(time);
 
-        if (level.obstacleAt(pos, this.size)) {
+        if (level.obstacleAt(nextPos, this.size)) {
             this.handleObstacle();
             return;
         }
 
-        this.pos = pos;
+        this.pos = nextPos;
     }
 }
 
@@ -282,10 +270,11 @@ class Coin extends Actor {
     constructor(pos=new Vector(0,0)) {
         // не мутируйте объекты Vector,
         // это может привести к трудно находимым ошибкам
-        pos.x += 0.2;
-        pos.y += 0.1;
-        super(pos, new Vector(0.6, 0.6), new Vector(0,0));
-        this.defaultPos = pos;
+        const coinPos = pos.plus(new Vector(0.2, 0.1));
+        const coinSize = new Vector(0.6, 0.6);
+
+        super(coinPos, coinSize, new Vector(0,0));
+        this.defaultPos = coinPos;
         this.spring = Math.random() * Math.PI * 2;
     }
 
@@ -322,15 +311,17 @@ class Coin extends Actor {
 class Player extends Actor {
     // не опускайте арументы конструктора Vector,
     // если их кто-нибудь поменяет, то всё сломается
-    constructor(pos=new Vector()) {
+    constructor(pos=new Vector(0,0)) {
         // не мутируйте объекты.
         // Вот пример:
         // const pos = new Vector(0, 0);
         // const player1 = new Player(pos); // создали игрока в 0, 0
         // const player2 = new Player(pos); // хотим создать второго в 0, 0
         //                                  // но уже равно -0.5, 0
-        pos.y -= 0.5;
-        super(pos, new Vector(0.8, 1.5), new Vector(0,0));
+        const startPos = pos.plus(new Vector(0, -0.5));
+        const playerSize = new Vector(0.8, 1.5);
+
+        super(startPos, playerSize, new Vector(0,0));
     }
 
     get type() {
